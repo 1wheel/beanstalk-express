@@ -5,6 +5,7 @@ var logger = require('morgan');
 var cookieParser = require('cookie-parser');
 var bodyParser = require('body-parser');
 var mysql = require('mysql')
+var async = require('async')
 
 var routes = require('./routes/index');
 var users = require('./routes/users');
@@ -17,10 +18,10 @@ var env = process.env.NODE_ENV || 'development';
 if ('development' == env) {
   console.log('Using development settings.');
   app.set('connection', mysql.createConnection({
-    host: '',
-    user: '',
-    port: '',
-    password: ''}));
+    host: '127.0.0.1',
+    user: 'root',
+    port: '3306',
+    password: 'gtsdev'}));
 } else{
     console.log('Using production settings.');
     app.set('connection', mysql.createConnection({
@@ -48,6 +49,49 @@ app.use('/users', users);
 app.use('/hike', hike.index);
 
 app.post('/add_hike', hike.add_hike)
+
+
+
+var client = app.get('connection');
+async.series([
+  function connect(callback) {
+    client.connect(callback);
+  },
+  function clear(callback) {
+    client.query('DROP DATABASE IF EXISTS mynode_db', callback);
+  },
+  function create_db(callback) {
+    client.query('CREATE DATABASE mynode_db', callback);
+  },
+  function use_db(callback) {
+    client.query('USE mynode_db', callback);
+  },
+  function create_table(callback) {
+     client.query('CREATE TABLE HIKES (' +
+                         'ID VARCHAR(40), ' +
+                         'HIKE_DATE DATE, ' +
+                         'NAME VARCHAR(40), ' +
+                         'DISTANCE VARCHAR(40), ' +
+                         'LOCATION VARCHAR(40), ' +
+                         'WEATHER VARCHAR(40), ' +
+                         'PRIMARY KEY(ID))', callback);
+  },
+  function insert_default(callback) {
+    var hike = {HIKE_DATE: new Date(), NAME: 'Hazard Stevens',
+          LOCATION: 'Mt Rainier', DISTANCE: '4,027m vertical', WEATHER:'Bad'};
+    client.query('INSERT INTO HIKES set ?', hike, callback);
+  }
+], function (err, results) {
+  if (err) {
+    console.log('Exception initializing database.');
+    throw err;
+  } else {
+    console.log('Database initialization complete.');
+    //init();
+  }
+});
+
+
 
 // catch 404 and forward to error handler
 app.use(function(req, res, next) {
