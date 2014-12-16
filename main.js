@@ -4,12 +4,32 @@ var favicon = require('serve-favicon');
 var logger = require('morgan');
 var cookieParser = require('cookie-parser');
 var bodyParser = require('body-parser');
+var mysql = require('mysql')
 
 var routes = require('./routes/index');
 var users = require('./routes/users');
 var hike = require('./routes/hike');
 
 var app = express();
+
+
+var env = process.env.NODE_ENV || 'development';
+if ('development' == env) {
+  console.log('Using development settings.');
+  app.set('connection', mysql.createConnection({
+    host: '',
+    user: '',
+    port: '',
+    password: ''}));
+} else{
+    console.log('Using production settings.');
+    app.set('connection', mysql.createConnection({
+    host: process.env.RDS_HOSTNAME,
+    user: process.env.RDS_USERNAME,
+    password: process.env.RDS_PASSWORD,
+    port: process.env.RDS_PORT}));
+}
+
 
 // view engine setup
 app.set('views', path.join(__dirname, 'views'));
